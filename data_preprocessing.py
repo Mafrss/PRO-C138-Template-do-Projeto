@@ -7,11 +7,14 @@ nltk.download('wordnet')
 from nltk.stem import PorterStemmer
 
 # crie um objeto/instância da classe PorterStemmer()
-
+stemmer = PorterStemmer()
 
 # importando a biblioteca json
 import json
+
+# armazenar dados em arquivos
 import pickle
+
 import numpy as np
 
 words=[] #lista de palavras raízes únicas nos dados
@@ -30,19 +33,10 @@ train_data_file.close()
 def get_stem_words(words, ignore_words):
     stem_words = []
     for word in words:
-
-        # escreva o algoritmo de stemização:
-        '''
-        Verifique se a palavra não faz parte da palavra de parada:
-        1) converta-a para minúsculo
-        2) stemize a palavra
-        3) anexe-a na lista stem_words
-        4) retorne a lista
-        ''' 
-        # Adicione o código aqui #        
-
-    return stem_words
-
+        if word not in ignore_words:
+            w = stemmer.stem(word.lower())
+            stem_words.append(w)
+    return stem_words        
 
 '''
 Lista de palavras-tronco ordenadas para nosso conjunto de dados : 
@@ -55,37 +49,26 @@ Lista de palavras-tronco ordenadas para nosso conjunto de dados :
 
 '''
 
-
 # criando uma função para criar o corpus
 def create_bot_corpus(words, classes, pattern_word_tags_list, ignore_words):
 
     for intent in data['intents']:
 
         # Adicione todos os padrões e tags a uma lista
-        for pattern in intent['patterns']:  
-
-            # tokenize o padrão          
-            pattern_words = nltk.word_tokenize(pattern)
-
-            # adicione as palavras tokenizadas à lista words        
-                          
-            # adicione a 'lista de palavras tokenizadas' junto com a 'tag' à lista pattern_word_tags_list
+        for pattern in intent['patterns']:            
+            pattern_word = nltk.word_tokenize(pattern)            
+            words.extend(pattern_word)                        
+            pattern_word_tags_list.append((pattern_word, intent['tag']))
             
             
         # Adicione todas as tags à lista classes
         if intent['tag'] not in classes:
             classes.append(intent['tag'])
 
-            
     stem_words = get_stem_words(words, ignore_words) 
-
-    # Remova palavras duplicadas de stem_words
-
-    # ordene a lista de palavras-tronco e a lista classes
-
-    
-    # imprima a stem_words
-    print('lista de palavras stemizadas: ' , stem_words)
+    stem_words = sorted(list(set(stem_words)))
+    print(stem_words)
+    classes = sorted(list(set(classes)))
 
     return stem_words, classes, pattern_word_tags_list
 
@@ -107,13 +90,12 @@ def bag_of_words_encoding(stem_words, pattern_word_tags_list):
         stemmed_pattern_word = get_stem_words(pattern_words, ignore_words)
 
         # Codificando dados de entrada 
-        '''
-        Escreva o algoritmo BOW:
-        1) pegue uma palavra da lista stem_words
-        2) verifique se essa palavra está em stemmed_pattern_word
-        3) anexe 1 no BOW; caso contrário, anexe 0
-        '''
-        
+        for word in stem_words:            
+            if word in stemmed_pattern_word:              
+                bag_of_words.append(1)
+            else:
+                bag_of_words.append(0)
+
         bag.append(bag_of_words)
     
     return np.array(bag)
@@ -145,7 +127,8 @@ def preprocess_train_data():
     stem_words, tag_classes, word_tags_list = create_bot_corpus(words, classes, pattern_word_tags_list, ignore_words)
     
     # Converta as palavras-tronco e a lista classes para o formato de arquivo Python pickle
-    
+    pickle.dump(stem_words, open('words.pkl','wb'))
+    pickle.dump(tag_classes, open('classes.pkl','wb'))
 
     train_x = bag_of_words_encoding(stem_words, word_tags_list)
     train_y = class_label_encoding(tag_classes, word_tags_list)
@@ -153,8 +136,6 @@ def preprocess_train_data():
     return train_x, train_y
 
 bow_data  , label_data = preprocess_train_data()
-
-# depois de completar o código, remova o comentário das instruções de impressão
 print("primeira codificação BOW: " , bow_data[0])
 print("primeira codificação Label: " , label_data[0])
 
